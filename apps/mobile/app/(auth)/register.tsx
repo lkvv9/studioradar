@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/providers/AuthProvider";
 import type { UserRole } from "@studioradar/shared";
 
 const ROLES: { value: UserRole; emoji: string; label: string; description: string }[] = [
@@ -22,6 +23,7 @@ const ROLES: { value: UserRole; emoji: string; label: string; description: strin
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { signUp } = useAuth();
   const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<UserRole>("artist");
   const [fullName, setFullName] = useState("");
@@ -32,11 +34,12 @@ export default function RegisterScreen() {
   async function handleRegister() {
     if (!fullName || !email || !password) return;
     setLoading(true);
-    // TODO: supabase.auth.signUp({ email, password, options: { data: { full_name, role } } })
-    setTimeout(() => {
+    const { error } = await signUp(email, password, fullName, role);
+    if (error) {
       setLoading(false);
-      router.replace("/(tabs)/map");
-    }, 1000);
+      return;
+    }
+    router.replace("/(tabs)/map");
   }
 
   return (

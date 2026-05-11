@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { scheduleLocalNotification, scheduleBookingReminder } from "@/lib/notifications";
 import { useState, useMemo } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { X, ChevronLeft, ChevronRight, Clock, Calendar, FileText, CheckCircle2, Building2, Home } from "lucide-react-native";
@@ -90,6 +91,22 @@ export default function BookingScreen() {
     await new Promise((r) => setTimeout(r, 1500));
     setLoading(false);
     setConfirmed(true);
+
+    // Notification immédiate de confirmation
+    await scheduleLocalNotification({
+      title: "✅ Réservation confirmée !",
+      body:  `${studio.name} — ${String(selectedHour).padStart(2, "0")}:00 pour ${duration}h`,
+      data:  { screen: "my-bookings" },
+    });
+
+    // Rappel 1h avant la session
+    const sessionStart = new Date(selectedDay);
+    sessionStart.setHours(selectedHour!, 0, 0, 0);
+    await scheduleBookingReminder({
+      studioName: studio.name,
+      startTime:  sessionStart,
+      bookingId:  "pending",
+    });
   }
 
   if (confirmed) {

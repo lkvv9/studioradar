@@ -10,9 +10,11 @@ import {
 } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,11 +24,13 @@ export default function LoginScreen() {
     if (!email || !password) return;
     setLoading(true);
     setError("");
-    // TODO: supabase.auth.signInWithPassword({ email, password })
-    setTimeout(() => {
+    const { error } = await signIn(email, password);
+    if (error) {
+      setError("Email ou mot de passe incorrect.");
       setLoading(false);
-      router.replace("/(tabs)/map");
-    }, 1000);
+      return;
+    }
+    router.replace("/(tabs)/map");
   }
 
   return (

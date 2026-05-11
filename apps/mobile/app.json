@@ -32,6 +32,16 @@
       [
         "expo-splash-screen",
         { "backgroundColor": "#0a0a1a" }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#2d4eff",
+          "sounds": [],
+          "androidMode": "default",
+          "androidCollapsedTitle": "StudioRadar"
+        }
       ]
     ],
     "experiments": {

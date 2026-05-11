@@ -19,6 +19,7 @@ import Animated, {
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Heart, X, MapPin, Music2 } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { scheduleLocalNotification } from "@/lib/notifications";
 import type { SwipeProfile } from "@studioradar/shared";
 
 const { width, height } = Dimensions.get("window");
@@ -53,6 +54,13 @@ export default function MatchScreen() {
       setShowMatchToast(current.full_name);
       setTimeout(() => setShowMatchToast(null), 2200);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // Notif de match (simulé — en prod, déclenché côté serveur quand c'est mutuel)
+      scheduleLocalNotification({
+        title: "🎉 Nouveau match !",
+        body:  `Tu as matché avec ${current.full_name}`,
+        data:  { screen: "match" },
+        delay: 1,
+      });
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
