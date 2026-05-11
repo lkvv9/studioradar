@@ -155,7 +155,14 @@ export default function StudioDetailScreen() {
 
       {/* CTA fixé en bas */}
       <View style={styles.cta}>
-        <TouchableOpacity style={styles.ctaBtn} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.ctaBtn}
+          onPress={() => isPro
+            ? router.push(`/booking/${studio.id}`)
+            : undefined
+          }
+          activeOpacity={0.85}
+        >
           {isPro ? (
             <>
               <Clock size={18} color="#fff" />

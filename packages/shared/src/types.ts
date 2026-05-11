@@ -54,6 +54,24 @@ export interface Booking {
   created_at: string;
 }
 
+export interface TimeSlot {
+  hour: number;
+  minute: 0 | 30;
+  available: boolean;
+}
+
+export interface BookingDraft {
+  studio_id: string;
+  date: string;        // ISO date string "YYYY-MM-DD"
+  start_hour: number;  // 0-23
+  duration_hours: number; // 1-8
+  notes?: string;
+}
+
+export interface BookingWithStudio extends Booking {
+  studio: Pick<Studio, "id" | "name" | "type" | "hourly_rate" | "city" | "address">;
+}
+
 export interface MusicMatch {
   id: string;
   user_id: string;

@@ -12,6 +12,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="studio/[id]" options={{ presentation: "modal" }} />
+        <Stack.Screen name="booking/[studioId]" options={{ presentation: "modal" }} />
       </Stack>
     </GestureHandlerRootView>
   );
