@@ -24,7 +24,8 @@ function RootNavigator() {
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="studio/[id]"          options={{ presentation: "modal" }} />
       <Stack.Screen name="booking/[studioId]"   options={{ presentation: "modal" }} />
-      <Stack.Screen name="my-bookings"          options={{ presentation: "card" }} />
+      <Stack.Screen name="my-bookings"            options={{ presentation: "card" }} />
+      <Stack.Screen name="review/[bookingId]"    options={{ presentation: "modal" }} />
     </Stack>
   );
 }

@@ -72,6 +72,22 @@ export interface BookingWithStudio extends Booking {
   studio: Pick<Studio, "id" | "name" | "type" | "hourly_rate" | "city" | "address">;
 }
 
+export interface Review {
+  id:           string;
+  studio_id:    string;
+  booking_id:   string;
+  author_id:    string;
+  rating:       1 | 2 | 3 | 4 | 5;
+  comment?:     string;
+  created_at:   string;
+}
+
+export interface ReviewWithAuthor extends Review {
+  author_name:   string;
+  author_avatar?: string;
+  author_role:   UserRole;
+}
+
 export interface MusicMatch {
   id: string;
   user_id: string;

@@ -9,6 +9,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { X, Star, Clock, Mic2, Building2, Home, MapPin, ChevronRight } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { ReviewsList } from "@/components/studio/ReviewsList";
 import type { Studio } from "@studioradar/shared";
 
 const { width } = Dimensions.get("window");
@@ -122,31 +123,8 @@ export default function StudioDetailScreen() {
 
           {/* Avis */}
           <View style={styles.section}>
-            <View style={styles.reviewsHeader}>
-              <Text style={styles.sectionTitle}>Avis récents</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAll}>Voir tout</Text>
-              </TouchableOpacity>
-            </View>
-            {[
-              { name: "K.D.", note: "Super setup, l'ingé est au top. Je reviendrai sans hésitation !", stars: 5 },
-              { name: "Mia T.", note: "Acoustique parfaite, matériel de qualité. Seul bémol : parking difficile.", stars: 4 },
-            ].map((r) => (
-              <View key={r.name} style={styles.reviewCard}>
-                <View style={styles.reviewHeader}>
-                  <View style={styles.reviewAvatar}>
-                    <Text style={styles.reviewAvatarText}>{r.name.charAt(0)}</Text>
-                  </View>
-                  <Text style={styles.reviewName}>{r.name}</Text>
-                  <View style={styles.reviewStars}>
-                    {Array.from({ length: r.stars }).map((_, i) => (
-                      <Star key={i} size={11} color="#facc15" fill="#facc15" />
-                    ))}
-                  </View>
-                </View>
-                <Text style={styles.reviewText}>{r.note}</Text>
-              </View>
-            ))}
+            <Text style={styles.sectionTitle}>Avis</Text>
+            <ReviewsList studioId={studio.id} limit={3} />
           </View>
         </View>
 

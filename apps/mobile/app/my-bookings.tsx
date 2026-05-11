@@ -7,7 +7,7 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, router as routerStatic } from "expo-router";
 import { ChevronLeft, Calendar, Clock, Building2, Home, CheckCircle2, XCircle, AlertCircle } from "lucide-react-native";
 import type { BookingWithStudio } from "@studioradar/shared";
 
@@ -107,7 +107,19 @@ export default function MyBookingsScreen() {
         {past.length > 0 && (
           <Section title="Historique">
             {past.map((b) => (
-              <BookingCard key={b.id} booking={b} />
+              <BookingCard
+                key={b.id}
+                booking={b}
+                onReview={() => router.push({
+                  pathname: "/review/[bookingId]",
+                  params: {
+                    bookingId:  b.id,
+                    studioId:   b.studio.id,
+                    studioName: b.studio.name,
+                    studioType: b.studio.type,
+                  },
+                })}
+              />
             ))}
           </Section>
         )}
@@ -141,7 +153,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function BookingCard({ booking, onCancel }: { booking: BookingWithStudio; onCancel?: () => void }) {
+function BookingCard({ booking, onCancel, onReview }: { booking: BookingWithStudio; onCancel?: () => void; onReview?: () => void }) {
   const status = STATUS_CONFIG[booking.status];
   const duration = durationHours(booking.start_time, booking.end_time);
   const isPro = booking.studio.type === "pro";
@@ -190,8 +202,8 @@ function BookingCard({ booking, onCancel }: { booking: BookingWithStudio; onCanc
           </TouchableOpacity>
         )}
         {booking.status === "completed" && (
-          <TouchableOpacity style={styles.reviewBtn}>
-            <Text style={styles.reviewBtnText}>Laisser un avis</Text>
+          <TouchableOpacity style={styles.reviewBtn} onPress={onReview}>
+            <Text style={styles.reviewBtnText}>⭐ Laisser un avis</Text>
           </TouchableOpacity>
         )}
       </View>
