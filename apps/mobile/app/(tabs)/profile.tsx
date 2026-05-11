@@ -22,7 +22,7 @@ export default function ProfileScreen() {
     { icon: <Calendar size={18} color="#5478ff" />, label: "Mes réservations", onPress: () => router.push("/my-bookings") },
     { icon: <Heart    size={18} color="#f472b6" />, label: "Mes matches",       onPress: () => {} },
     { icon: <Star     size={18} color="#facc15" />, label: "Mes avis",           onPress: () => {} },
-    { icon: <Mic2     size={18} color="#00ff88" />, label: "Mon studio",         onPress: () => {} },
+    { icon: <Mic2     size={18} color="#00ff88" />, label: "Dashboard studio",    onPress: () => router.push("/dashboard") },
     { icon: <Settings size={18} color="rgba(255,255,255,0.4)" />, label: "Paramètres", onPress: () => {} },
   ];
 
