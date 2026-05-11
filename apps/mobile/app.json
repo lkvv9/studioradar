@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "StudioRadar",
+    "slug": "studioradar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "studioradar",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0a0a1a",
+    "splash": {
+      "backgroundColor": "#0a0a1a",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.studioradar.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "StudioRadar a besoin de ta position pour trouver les studios proches de toi."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a1a"
+      },
+      "package": "com.studioradar.app",
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-location",
+      [
+        "expo-splash-screen",
+        { "backgroundColor": "#0a0a1a" }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
