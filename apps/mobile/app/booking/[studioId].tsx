@@ -11,20 +11,16 @@ import {
   Alert,
 } from "react-native";
 import { scheduleLocalNotification, scheduleBookingReminder } from "@/lib/notifications";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { X, ChevronLeft, ChevronRight, Clock, Calendar, FileText, CheckCircle2, Building2, Home } from "lucide-react-native";
 import Animated, { FadeInRight, FadeInLeft } from "react-native-reanimated";
+import { useStudio } from "@/hooks/useStudios";
+import { calculateFees } from "@studioradar/shared";
 import type { Studio } from "@studioradar/shared";
+import { supabase } from "@/lib/supabase/client";
 
 const { width } = Dimensions.get("window");
-
-// Mock studio data — remplacé par Supabase
-const STUDIOS: Record<string, Studio> = {
-  "1": { id: "1", owner_id: "u1", name: "Studio Nova", type: "pro", description: "", hourly_rate: 45, is_free: false, is_available_now: true, lat: 0, lng: 0, address: "12 rue de la Musique", city: "Paris", photos: [], equipment: [], genres: [], rating: 4.9, reviews_count: 47, created_at: "", updated_at: "" },
-  "2": { id: "2", owner_id: "u2", name: "Frequency Studio", type: "pro", description: "", hourly_rate: 30, is_free: false, is_available_now: true, lat: 0, lng: 0, address: "5 passage Verdeau", city: "Paris", photos: [], equipment: [], genres: [], rating: 4.7, reviews_count: 23, created_at: "", updated_at: "" },
-  "3": { id: "3", owner_id: "u3", name: "Chez Julien", type: "home", description: "", hourly_rate: 10, is_free: false, is_available_now: true, lat: 0, lng: 0, address: "Montreuil", city: "Montreuil", photos: [], equipment: [], genres: [], rating: 4.5, reviews_count: 12, created_at: "", updated_at: "" },
-};
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7h → 22h
 const DURATIONS = [1, 2, 3, 4, 6, 8];
@@ -42,36 +38,45 @@ const DAYS = getDaysFromToday(14);
 const DAY_LABELS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
-// Faux créneaux occupés pour la démo
-const BOOKED_HOURS: Record<string, number[]> = {
-  "0": [9, 10, 14],
-  "1": [11, 12, 13],
-  "3": [8, 15, 16],
-};
-
 type Step = 1 | 2 | 3 | 4;
 
 export default function BookingScreen() {
   const { studioId } = useLocalSearchParams<{ studioId: string }>();
   const router = useRouter();
-  const studio = STUDIOS[studioId] ?? STUDIOS["1"];
+  const { studio, loading: studioLoading } = useStudio(studioId);
 
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep]                   = useState<Step>(1);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [duration, setDuration] = useState(2);
-  const [notes, setNotes] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  const [selectedHour, setSelectedHour]   = useState<number | null>(null);
+  const [duration, setDuration]           = useState(2);
+  const [notes, setNotes]                 = useState("");
+  const [loading, setLoading]             = useState(false);
+  const [confirmed, setConfirmed]         = useState(false);
+  const [bookedSlots, setBookedSlots]     = useState<number[]>([]);
 
-  const bookedToday = BOOKED_HOURS[String(selectedDayIndex)] ?? [];
-
-  const totalPrice = useMemo(
-    () => (studio.hourly_rate ?? 0) * duration,
-    [studio.hourly_rate, duration]
+  const fees = useMemo(
+    () => calculateFees((studio?.hourly_rate ?? 0) * duration),
+    [studio?.hourly_rate, duration]
   );
 
   const selectedDay = DAYS[selectedDayIndex];
+
+  useEffect(() => {
+    if (!studioId) return;
+    setBookedSlots([]);
+    const dateStr = selectedDay.toISOString().split("T")[0];
+    supabase.rpc("booked_slots", { p_studio_id: studioId, p_date: dateStr })
+      .then(({ data }) => setBookedSlots((data ?? []).map((r: { hour: number }) => r.hour)));
+  }, [studioId, selectedDayIndex]);
+
+  if (studioLoading || !studio) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color="#5478ff" size="large" />
+      </View>
+    );
+  }
+
 
   function formatDate(d: Date) {
     return `${DAY_LABELS[d.getDay()]} ${d.getDate()} ${MONTH_LABELS[d.getMonth()]}`;
@@ -110,7 +115,7 @@ export default function BookingScreen() {
   }
 
   if (confirmed) {
-    return <ConfirmationScreen studio={studio} day={selectedDay} hour={selectedHour!} duration={duration} total={totalPrice} onDone={() => router.replace("/(tabs)/map")} />;
+    return <ConfirmationScreen studio={studio} day={selectedDay} hour={selectedHour!} duration={duration} total={fees.total} onDone={() => router.replace("/(tabs)/map")} />;
   }
 
   const canNext =
@@ -161,7 +166,7 @@ export default function BookingScreen() {
               onSelectDay={(i) => { setSelectedDayIndex(i); setSelectedHour(null); }}
               formatDate={formatDate}
               hours={HOURS}
-              bookedHours={bookedToday}
+              bookedHours={bookedSlots}
               selectedHour={selectedHour}
               onSelectHour={setSelectedHour}
             />
@@ -176,7 +181,7 @@ export default function BookingScreen() {
               onSelect={setDuration}
               studio={studio}
               selectedHour={selectedHour!}
-              totalPrice={totalPrice}
+              fees={fees}
             />
           </Animated.View>
         )}
@@ -189,7 +194,7 @@ export default function BookingScreen() {
               formatDate={formatDate}
               hour={selectedHour!}
               duration={duration}
-              totalPrice={totalPrice}
+              fees={fees}
               notes={notes}
               onNotesChange={setNotes}
             />
@@ -204,9 +209,9 @@ export default function BookingScreen() {
         {step === 3 ? (
           <View style={styles.footerInner}>
             <View>
-              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalLabel}>Total TTC</Text>
               <Text style={styles.totalPrice}>
-                {studio.is_free ? "Gratuit" : `${totalPrice}€`}
+                {studio.is_free ? "Gratuit" : `${fees.total}€`}
               </Text>
             </View>
             <TouchableOpacity
@@ -335,14 +340,14 @@ const s1 = StyleSheet.create({
 // ─── Step 2 : Durée ────────────────────────────────────────────────────────
 
 function Step2({
-  durations, duration, onSelect, studio, selectedHour, totalPrice,
+  durations, duration, onSelect, studio, selectedHour, fees,
 }: {
   durations: number[];
   duration: number;
   onSelect: (d: number) => void;
   studio: Studio;
   selectedHour: number;
-  totalPrice: number;
+  fees: ReturnType<typeof calculateFees>;
 }) {
   return (
     <View style={s2.container}>
@@ -383,9 +388,21 @@ function Step2({
           <Text style={s2.recapLabel}>Tarif horaire</Text>
           <Text style={s2.recapValue}>{studio.is_free ? "Gratuit" : `${studio.hourly_rate}€/h`}</Text>
         </View>
+        {!studio.is_free && (
+          <>
+            <View style={s2.recapRow}>
+              <Text style={s2.recapLabel}>Prix studio</Text>
+              <Text style={s2.recapValue}>{fees.studioPrice}€</Text>
+            </View>
+            <View style={s2.recapRow}>
+              <Text style={s2.recapLabel}>Frais de service (12%)</Text>
+              <Text style={s2.recapValue}>{fees.platformFee}€</Text>
+            </View>
+          </>
+        )}
         <View style={[s2.recapRow, s2.recapTotal]}>
-          <Text style={s2.totalLabel}>Total</Text>
-          <Text style={s2.totalValue}>{studio.is_free ? "Gratuit" : `${totalPrice}€`}</Text>
+          <Text style={s2.totalLabel}>Total TTC</Text>
+          <Text style={s2.totalValue}>{studio.is_free ? "Gratuit" : `${fees.total}€`}</Text>
         </View>
       </View>
     </View>
@@ -416,26 +433,30 @@ const s2 = StyleSheet.create({
 // ─── Step 3 : Résumé + Notes ───────────────────────────────────────────────
 
 function Step3({
-  studio, day, formatDate, hour, duration, totalPrice, notes, onNotesChange,
+  studio, day, formatDate, hour, duration, fees, notes, onNotesChange,
 }: {
   studio: Studio;
   day: Date;
   formatDate: (d: Date) => string;
   hour: number;
   duration: number;
-  totalPrice: number;
+  fees: ReturnType<typeof calculateFees>;
   notes: string;
   onNotesChange: (v: string) => void;
 }) {
   const endHour = (hour + duration) % 24;
 
   const rows = [
-    { label: "Studio",     value: studio.name },
-    { label: "Adresse",    value: `${studio.address}, ${studio.city}` },
-    { label: "Date",       value: formatDate(day) },
-    { label: "Créneau",    value: `${String(hour).padStart(2,"0")}:00 → ${String(endHour).padStart(2,"0")}:00` },
-    { label: "Durée",      value: `${duration}h` },
-    { label: "Total",      value: studio.is_free ? "Gratuit" : `${totalPrice}€` },
+    { label: "Studio",                value: studio.name },
+    { label: "Adresse",               value: `${studio.address}, ${studio.city}` },
+    { label: "Date",                  value: formatDate(day) },
+    { label: "Créneau",               value: `${String(hour).padStart(2,"0")}:00 → ${String(endHour).padStart(2,"0")}:00` },
+    { label: "Durée",                 value: `${duration}h` },
+    ...(!studio.is_free ? [
+      { label: "Prix studio",           value: `${fees.studioPrice}€` },
+      { label: "Frais de service (12%)", value: `${fees.platformFee}€` },
+    ] : []),
+    { label: "Total TTC",             value: studio.is_free ? "Gratuit" : `${fees.total}€` },
   ];
 
   return (
@@ -485,7 +506,7 @@ function Step3({
         <View style={s3.payInfo}>
           <Text style={s3.payInfoText}>
             💳 Paiement sécurisé via Stripe. Tu seras débité de{" "}
-            <Text style={{ color: "#fff", fontWeight: "700" }}>{totalPrice}€</Text> maintenant.
+            <Text style={{ color: "#fff", fontWeight: "700" }}>{fees.total}€</Text> maintenant.
             Annulation gratuite jusqu'à 24h avant.
           </Text>
         </View>

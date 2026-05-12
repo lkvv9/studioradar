@@ -5,29 +5,37 @@ import {
   ScrollView,
   TouchableOpacity,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { X, Star, Clock, Mic2, Building2, Home, MapPin, ChevronRight } from "lucide-react-native";
+import { X, Star, Clock, Mic2, Building2, Home, MapPin, ChevronRight, MessageCircle } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { ReviewsList } from "@/components/studio/ReviewsList";
-import type { Studio } from "@studioradar/shared";
-
-const { width } = Dimensions.get("window");
-
-// Mock — à remplacer par une requête Supabase
-const STUDIOS: Record<string, Studio> = {
-  "1": { id: "1", owner_id: "u1", name: "Studio Nova", type: "pro", description: "Studio professionnel 80m², cabine acoustique isolée, matériel haut de gamme. Accessible 7j/7 sur réservation.\n\nAmbiance pro et chaleureuse. Ingé son disponible sur demande.", hourly_rate: 45, is_free: false, is_available_now: true, lat: 48.8566, lng: 2.3522, address: "12 rue de la Musique", city: "Paris", photos: [], equipment: ["Neve 8078", "Pro Tools", "Neumann U87", "API 2500", "Yamaha NS10"], genres: ["Hip-hop", "R&B", "Pop", "Soul"], rating: 4.9, reviews_count: 47, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  "2": { id: "2", owner_id: "u2", name: "Frequency Studio", type: "pro", description: "Studio indépendant avec une acoustique parfaite. Spécialisé rap et électro. Ingé son expérimenté inclus dans le tarif.", hourly_rate: 30, is_free: false, is_available_now: true, lat: 48.862, lng: 2.3488, address: "5 passage Verdeau", city: "Paris", photos: [], equipment: ["SSL 4000", "Ableton Live", "AKG C414", "Focal Alpha"], genres: ["Rap", "Électro", "Trap"], rating: 4.7, reviews_count: 23, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  "3": { id: "3", owner_id: "u3", name: "Chez Julien", type: "home", description: "Beatmaker depuis 10 ans. Setup home studio complet. Ambiance détendue, idéal pour les artistes qui veulent créer sans pression.", hourly_rate: 10, is_free: false, is_available_now: true, lat: 48.845, lng: 2.365, address: "Montreuil", city: "Montreuil", photos: [], equipment: ["Focusrite Scarlett 2i2", "Logic Pro X", "Rode NT1", "KRK Rokit 5"], genres: ["Rap", "Afro", "Drill"], rating: 4.5, reviews_count: 12, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-  "4": { id: "4", owner_id: "u4", name: "Sarah Records", type: "home", description: "Guitariste et ingénieure du son. J'accueille artistes lo-fi, indie et folk chez moi. Session gratuite pour découvrir.", hourly_rate: 0, is_free: true, is_available_now: false, lat: 48.878, lng: 2.328, address: "9ème arrondissement", city: "Paris", photos: [], equipment: ["GarageBand", "Fender Stratocaster", "SM58", "Scarlett Solo"], genres: ["Indie", "Folk", "Lo-fi"], rating: 4.3, reviews_count: 8, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-};
+import { useOpenConversation } from "@/hooks/useChat";
+import { useStudio } from "@/hooks/useStudios";
 
 export default function StudioDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const studio = STUDIOS[id] ?? STUDIOS["1"];
+  const { studio, loading } = useStudio(id);
+  const { openConversation, loading: chatLoading } = useOpenConversation();
+
+  if (loading || !studio) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator color="#5478ff" size="large" />
+      </View>
+    );
+  }
 
   const isPro = studio.type === "pro";
+
+  async function handleContact() {
+    const convId = await openConversation(studio.owner_id);
+    if (convId) {
+      router.push({ pathname: "/chat/[id]", params: { id: convId, otherName: studio.name } });
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -133,27 +141,46 @@ export default function StudioDetailScreen() {
 
       {/* CTA fixé en bas */}
       <View style={styles.cta}>
-        <TouchableOpacity
-          style={styles.ctaBtn}
-          onPress={() => isPro
-            ? router.push(`/booking/${studio.id}`)
-            : undefined
-          }
-          activeOpacity={0.85}
-        >
-          {isPro ? (
-            <>
+        {isPro ? (
+          <View style={styles.ctaRow}>
+            <TouchableOpacity
+              style={styles.ctaBtnSecondary}
+              onPress={handleContact}
+              activeOpacity={0.85}
+              disabled={chatLoading}
+            >
+              {chatLoading
+                ? <ActivityIndicator color="#5478ff" size="small" />
+                : <MessageCircle size={20} color="#5478ff" />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.ctaBtn, { flex: 1 }]}
+              onPress={() => router.push(`/booking/${studio.id}`)}
+              activeOpacity={0.85}
+            >
               <Clock size={18} color="#fff" />
               <Text style={styles.ctaBtnText}>Réserver maintenant</Text>
-            </>
-          ) : (
-            <>
-              <Mic2 size={18} color="#fff" />
-              <Text style={styles.ctaBtnText}>Contacter le créateur</Text>
-            </>
-          )}
-          <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
-        </TouchableOpacity>
+              <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.ctaBtn}
+            onPress={handleContact}
+            activeOpacity={0.85}
+            disabled={chatLoading}
+          >
+            {chatLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <>
+                <MessageCircle size={18} color="#fff" />
+                <Text style={styles.ctaBtnText}>Contacter le créateur</Text>
+                <ChevronRight size={18} color="rgba(255,255,255,0.6)" />
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -196,6 +223,8 @@ const styles = StyleSheet.create({
   reviewStars:     { flexDirection: "row", gap: 2 },
   reviewText:      { color: "rgba(255,255,255,0.5)", fontSize: 13, lineHeight: 18 },
   cta:             { position: "absolute", bottom: 0, left: 0, right: 0, padding: 20, paddingBottom: 36, backgroundColor: "rgba(10,10,26,0.95)", borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.06)" },
-  ctaBtn:          { backgroundColor: "#1a30f5", borderRadius: 16, paddingVertical: 18, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  ctaRow:          { flexDirection: "row", gap: 12 },
+  ctaBtnSecondary: { width: 54, height: 54, borderRadius: 16, backgroundColor: "rgba(45,78,255,0.12)", borderWidth: 1, borderColor: "rgba(45,78,255,0.3)", alignItems: "center", justifyContent: "center" },
+  ctaBtn:          { backgroundColor: "#1a30f5", borderRadius: 16, paddingVertical: 18, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
   ctaBtnText:      { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

@@ -1,8 +1,11 @@
 import { Tabs } from "expo-router";
-import { View, StyleSheet } from "react-native";
-import { MapPin, Heart, User, Radio } from "lucide-react-native";
+import { View, Text, StyleSheet } from "react-native";
+import { MapPin, Heart, User, Radio, MessageCircle } from "lucide-react-native";
+import { useConversations } from "@/hooks/useChat";
 
 export default function TabsLayout() {
+  const { totalUnread } = useConversations();
+
   return (
     <Tabs
       screenOptions={{
@@ -33,6 +36,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="chat"
+        options={{
+          title: "Messages",
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon icon={<MessageCircle size={22} color={color} />} focused={focused} badge={totalUnread} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profil",
@@ -45,10 +57,15 @@ export default function TabsLayout() {
   );
 }
 
-function TabIcon({ icon, focused }: { icon: React.ReactNode; focused: boolean }) {
+function TabIcon({ icon, focused, badge }: { icon: React.ReactNode; focused: boolean; badge?: number }) {
   return (
     <View style={[styles.iconWrapper, focused && styles.iconActive]}>
       {icon}
+      {!!badge && badge > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge > 99 ? "99+" : badge}</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -75,5 +92,22 @@ const styles = StyleSheet.create({
   },
   iconActive: {
     backgroundColor: "rgba(45,78,255,0.12)",
+  },
+  badge: {
+    position: "absolute",
+    top: 2,
+    right: 2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#ff3b30",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "800",
   },
 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
+import { calculateFees } from "@studioradar/shared";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2024-06-20" });
 
@@ -28,47 +29,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Studio introuvable" }, { status: 404 });
     }
 
-    const totalPrice = (studio.hourly_rate ?? 0) * duration_hours;
-    const amountCents = Math.round(totalPrice * 100);
+    const studioPrice = (studio.hourly_rate ?? 0) * duration_hours;
+    const { platformFee, total } = calculateFees(studioPrice);
+    const amountCents = Math.round(total * 100);
 
     if (amountCents === 0) {
       // Studio gratuit — créer la réservation directement
       const startTime = new Date(`${date}T${String(start_hour).padStart(2, "0")}:00:00`);
-      const endTime = new Date(startTime.getTime() + duration_hours * 60 * 60 * 1000);
+      const endTime   = new Date(startTime.getTime() + duration_hours * 60 * 60 * 1000);
 
       const { data: booking, error } = await supabase.from("bookings").insert({
         studio_id,
-        artist_id: user.id,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        total_price: 0,
-        status: "confirmed",
-        notes: notes ?? null,
+        artist_id:    user.id,
+        start_time:   startTime.toISOString(),
+        end_time:     endTime.toISOString(),
+        total_price:  0,
+        platform_fee: 0,
+        status:       "confirmed",
+        notes:        notes ?? null,
       }).select().single();
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json({ booking, free: true });
     }
 
-    // Créer le PaymentIntent Stripe
+    // Créer le PaymentIntent Stripe (montant total = prix studio + commission 12%)
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCents,
+      amount:   amountCents,
       currency: "eur",
       metadata: {
         studio_id,
-        user_id: user.id,
+        user_id:        user.id,
         date,
-        start_hour: String(start_hour),
+        start_hour:     String(start_hour),
         duration_hours: String(duration_hours),
-        notes: notes ?? "",
+        studio_price:   String(studioPrice),
+        platform_fee:   String(platformFee),
+        notes:          notes ?? "",
       },
       description: `StudioRadar — ${studio.name} — ${duration_hours}h le ${date}`,
     });
 
     return NextResponse.json({
-      client_secret: paymentIntent.client_secret,
-      amount: totalPrice,
-      payment_intent_id: paymentIntent.id,
+      client_secret:      paymentIntent.client_secret,
+      studio_price:       studioPrice,
+      platform_fee:       platformFee,
+      total,
+      payment_intent_id:  paymentIntent.id,
     });
   } catch (err) {
     console.error(err);

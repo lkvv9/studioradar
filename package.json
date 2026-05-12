@@ -10,6 +10,7 @@
     "mobile": "turbo run dev --filter=mobile"
   },
   "devDependencies": {
+    "supabase": "^2.98.2",
     "turbo": "^2.0.0"
   },
   "packageManager": "pnpm@10.33.4",

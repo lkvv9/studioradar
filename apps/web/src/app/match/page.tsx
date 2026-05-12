@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Heart, X, Music2, MapPin, Radio, Star } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
 import { cn } from "@/lib/cn";
 import type { SwipeProfile } from "@studioradar/shared";
 
@@ -79,16 +80,12 @@ export default function MatchPage() {
 
   return (
     <div className="min-h-screen bg-radar-dark text-white">
-      {/* Nav */}
-      <nav className="flex items-center justify-between px-4 py-4 border-b border-white/5">
-        <a href="/" className="text-xl font-bold tracking-tight">
-          Studio<span className="text-brand-400">Radar</span>
-        </a>
-        <div className="flex items-center gap-1.5 text-sm text-white/50">
-          <Heart className="w-4 h-4 text-pink-400" />
-          <span>{matched.length} match{matched.length > 1 ? "s" : ""}</span>
-        </div>
-      </nav>
+      <Navbar />
+      {/* Match count sub-header */}
+      <div className="flex items-center justify-center gap-2 pt-20 pb-2 text-sm text-white/40">
+        <Heart className="w-4 h-4 text-pink-400" />
+        <span>{matched.length} match{matched.length > 1 ? "s" : ""}</span>
+      </div>
 
       <div className="max-w-sm mx-auto px-4 pt-8 pb-24">
         <div className="text-center mb-8">

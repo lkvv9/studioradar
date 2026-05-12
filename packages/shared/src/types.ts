@@ -88,6 +88,26 @@ export interface ReviewWithAuthor extends Review {
   author_role:   UserRole;
 }
 
+export interface Message {
+  id:              string;
+  conversation_id: string;
+  sender_id:       string;
+  content:         string;
+  read_at?:        string;
+  created_at:      string;
+}
+
+export interface Conversation {
+  id:               string;
+  other_id:         string;
+  other_name:       string;
+  other_avatar?:    string;
+  other_role:       UserRole;
+  last_message?:    string;
+  last_message_at?: string;
+  unread_count:     number;
+}
+
 export interface MusicMatch {
   id: string;
   user_id: string;

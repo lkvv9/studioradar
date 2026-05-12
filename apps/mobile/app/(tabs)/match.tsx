@@ -17,20 +17,16 @@ import Animated, {
   Extrapolation,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { Heart, X, MapPin, Music2 } from "lucide-react-native";
+import { Heart, X, MapPin, Music2, MessageCircle } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import { scheduleLocalNotification } from "@/lib/notifications";
+import { useOpenConversation } from "@/hooks/useChat";
+import { useSwipeProfiles } from "@/hooks/useStudios";
 import type { SwipeProfile } from "@studioradar/shared";
 
 const { width, height } = Dimensions.get("window");
 const SWIPE_THRESHOLD = width * 0.35;
-
-const MOCK_PROFILES: SwipeProfile[] = [
-  { id: "p1", full_name: "Liam B.", bio: "Beatmaker trap/afro depuis 5 ans. Je cherche des rappeurs pour des sessions. Studio à dispo chez moi.", genres: ["Trap", "Afro", "Drill"], role: "home_studio", distance_km: 1.2 },
-  { id: "p2", full_name: "Aïcha R.", bio: "Chanteuse R&B et soul. Je compose mes propres morceaux et cherche un producteur.", genres: ["R&B", "Soul", "Pop"], role: "artist", distance_km: 2.8 },
-  { id: "p3", full_name: "Marco V.", bio: "Guitariste indie/jazz. Jam sessions les weekends. Ouvert à tout projet créatif.", genres: ["Indie", "Jazz", "Folk"], role: "music_lover", distance_km: 0.7 },
-  { id: "p4", full_name: "Studio K", bio: "Studio pro cherche artistes émergents pour sessions découverte à tarif réduit.", genres: ["Hip-hop", "Pop", "Électro"], role: "pro_studio", distance_km: 3.5 },
-];
 
 const ROLE_CONFIG = {
   artist:      { label: "Artiste",     color: "#5478ff", bg: "rgba(84,120,255,0.15)" },
@@ -42,28 +38,27 @@ const ROLE_CONFIG = {
 const AVATAR_COLORS = ["#1a30f5", "#7c3aed", "#059669", "#dc2626", "#d97706"];
 
 export default function MatchScreen() {
-  const [profiles, setProfiles] = useState(MOCK_PROFILES);
+  const router = useRouter();
+  const { openConversation } = useOpenConversation();
+  const { profiles: fetchedProfiles, loading, recordSwipe } = useSwipeProfiles();
+  const [profiles, setProfiles] = useState<SwipeProfile[]>([]);
   const [matched, setMatched] = useState<SwipeProfile[]>([]);
-  const [showMatchToast, setShowMatchToast] = useState<string | null>(null);
+  const [showMatchToast, setShowMatchToast] = useState<SwipeProfile | null>(null);
+
+  useEffect(() => { setProfiles(fetchedProfiles); }, [fetchedProfiles]);
 
   function removeTop(liked: boolean) {
     const current = profiles[0];
     if (!current) return;
     if (liked) {
       setMatched((prev) => [...prev, current]);
-      setShowMatchToast(current.full_name);
-      setTimeout(() => setShowMatchToast(null), 2200);
+      setShowMatchToast(current);
+      setTimeout(() => setShowMatchToast(null), 3500);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      // Notif de match (simulé — en prod, déclenché côté serveur quand c'est mutuel)
-      scheduleLocalNotification({
-        title: "🎉 Nouveau match !",
-        body:  `Tu as matché avec ${current.full_name}`,
-        data:  { screen: "match" },
-        delay: 1,
-      });
     } else {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    recordSwipe(current.id, liked);
     setProfiles((prev) => prev.slice(1));
   }
 
@@ -89,7 +84,7 @@ export default function MatchScreen() {
             <Text style={styles.emptySub}>Reviens plus tard !</Text>
             <TouchableOpacity
               style={styles.restartBtn}
-              onPress={() => setProfiles(MOCK_PROFILES)}
+              onPress={() => setProfiles(fetchedProfiles)}
             >
               <Text style={styles.restartBtnText}>Recommencer</Text>
             </TouchableOpacity>
@@ -151,7 +146,21 @@ export default function MatchScreen() {
         <Animated.View style={styles.toast}>
           <Text style={styles.toastEmoji}>🎉</Text>
           <Text style={styles.toastTitle}>Match !</Text>
-          <Text style={styles.toastSub}>Toi et {showMatchToast}</Text>
+          <Text style={styles.toastSub}>Toi et {showMatchToast.full_name}</Text>
+          <TouchableOpacity
+            style={styles.toastMsgBtn}
+            onPress={async () => {
+              setShowMatchToast(null);
+              const convId = await openConversation(showMatchToast.id);
+              if (convId) {
+                router.push({ pathname: "/chat/[id]", params: { id: convId, otherName: showMatchToast.full_name, otherRole: showMatchToast.role } });
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <MessageCircle size={15} color="#e91e8c" />
+            <Text style={styles.toastMsgBtnText}>Envoyer un message</Text>
+          </TouchableOpacity>
         </Animated.View>
       )}
     </View>
@@ -294,8 +303,10 @@ const styles = StyleSheet.create({
   emptySub:         { fontSize: 14, color: "rgba(255,255,255,0.25)" },
   restartBtn:       { marginTop: 8, backgroundColor: "rgba(45,78,255,0.15)", paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 },
   restartBtnText:   { color: "#5478ff", fontWeight: "600" },
-  toast:            { position: "absolute", top: height * 0.35, alignSelf: "center", backgroundColor: "#e91e8c", borderRadius: 20, paddingHorizontal: 32, paddingVertical: 20, alignItems: "center", shadowColor: "#e91e8c", shadowOpacity: 0.5, shadowRadius: 20, elevation: 20 },
+  toast:            { position: "absolute", top: height * 0.35, alignSelf: "center", backgroundColor: "#e91e8c", borderRadius: 20, paddingHorizontal: 32, paddingVertical: 20, alignItems: "center", shadowColor: "#e91e8c", shadowOpacity: 0.5, shadowRadius: 20, elevation: 20, gap: 4 },
   toastEmoji:       { fontSize: 36, marginBottom: 4 },
   toastTitle:       { color: "#fff", fontSize: 22, fontWeight: "900" },
   toastSub:         { color: "rgba(255,255,255,0.8)", fontSize: 14, marginTop: 2 },
+  toastMsgBtn:      { marginTop: 10, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#fff", borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  toastMsgBtnText:  { color: "#e91e8c", fontSize: 13, fontWeight: "700" },
 });

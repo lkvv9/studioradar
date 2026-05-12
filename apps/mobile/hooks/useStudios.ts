@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase/client";
-import type { Studio } from "@studioradar/shared";
+import { useAuth } from "@/providers/AuthProvider";
+import type { Studio, SwipeProfile } from "@studioradar/shared";
 
 interface UseStudiosOptions {
   lat?: number;
@@ -86,4 +87,36 @@ export function useStudio(id: string) {
   }, [id]);
 
   return { studio, loading };
+}
+
+export function useSwipeProfiles() {
+  const { user } = useAuth();
+  const [profiles, setProfiles] = useState<SwipeProfile[]>([]);
+  const [loading, setLoading]   = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    // Profils non encore swipés par l'utilisateur courant
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, bio, genres, role")
+      .neq("id", user.id)
+      .not("id", "in", `(select target_id from swipes where swiper_id = '${user.id}')`)
+      .limit(20)
+      .then(({ data }) => {
+        setProfiles((data ?? []) as SwipeProfile[]);
+        setLoading(false);
+      });
+  }, [user]);
+
+  async function recordSwipe(targetId: string, liked: boolean) {
+    if (!user) return;
+    await supabase.from("swipes").upsert({
+      swiper_id: user.id,
+      target_id: targetId,
+      direction: liked ? "right" : "left",
+    }, { onConflict: "swiper_id,target_id" });
+  }
+
+  return { profiles, loading, recordSwipe };
 }

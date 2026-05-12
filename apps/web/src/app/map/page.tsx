@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { MapPin, Filter, Mic2, Building2, Home, X, Star, Clock, Zap, ChevronRight } from "lucide-react";
+import { Navbar } from "@/components/Navbar";
 import { cn } from "@/lib/cn";
 import type { Studio } from "@studioradar/shared";
 
@@ -111,6 +112,7 @@ export default function MapPage() {
 
   return (
     <div className="h-screen bg-radar-dark flex flex-col">
+      <Navbar />
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-white/5 bg-radar-dark/90 backdrop-blur z-10">
         <a href="/" className="text-xl font-bold tracking-tight shrink-0">

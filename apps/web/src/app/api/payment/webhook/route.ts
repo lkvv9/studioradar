@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "payment_intent.succeeded") {
     const pi = event.data.object as Stripe.PaymentIntent;
-    const { studio_id, user_id, date, start_hour, duration_hours, notes } = pi.metadata;
+    const { studio_id, user_id, date, start_hour, duration_hours, platform_fee, notes } = pi.metadata;
 
     const durationH = parseInt(duration_hours);
     const startTime = new Date(`${date}T${String(start_hour).padStart(2, "0")}:00:00`);
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       start_time: startTime.toISOString(),
       end_time: endTime.toISOString(),
       total_price: pi.amount / 100,
+      platform_fee: parseFloat(platform_fee ?? "0"),
       status: "confirmed",
       notes: notes || null,
       stripe_payment_intent_id: pi.id,
